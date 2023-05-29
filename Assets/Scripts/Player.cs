@@ -6,15 +6,22 @@ using UnityEngine.InputSystem;
 public class Player : MonoBehaviour
 {
     [SerializeField] float moveSpeed = 5f;
+    [SerializeField] float paddingLeft;
+    [SerializeField] float paddingRight;
 
     Vector2 userInput;
     Animator animator;
     Rigidbody2D rigidBody;
+    Vector2 minBounds;
+    Vector2 maxBounds;
+    Vector3 playerDelta;
 
     void Start()
     {
         animator = GetComponent<Animator>();
         rigidBody = GetComponent<Rigidbody2D>();
+
+        InitBounds();
     }
 
     void Update()
@@ -23,10 +30,22 @@ public class Player : MonoBehaviour
         FlipSprite();
     }
 
+    private void InitBounds() 
+    {
+        Camera mainCamera = Camera.main;
+        minBounds = mainCamera.ViewportToWorldPoint(new Vector2(0, 0));
+        maxBounds = mainCamera.ViewportToWorldPoint(new Vector2(1, 1));
+    }
+
     void Move()
     {
-        Vector2 playerVelocity = new Vector2(userInput.x * moveSpeed, rigidBody.velocity.y);
-        rigidBody.velocity = playerVelocity;
+        playerDelta = userInput * moveSpeed * Time.deltaTime;
+
+        Vector2 newPos = new Vector2();
+        newPos.x = Mathf.Clamp(transform.position.x + playerDelta.x, minBounds.x + paddingLeft, maxBounds.x - paddingRight);
+        newPos.y = Mathf.Clamp(transform.position.y + playerDelta.y, minBounds.y, maxBounds.y);
+
+        transform.position = newPos;
 
         animator.SetBool("isRunning", PlayerHasHorizontalSpeed());
     }
@@ -35,13 +54,13 @@ public class Player : MonoBehaviour
     {
         if (PlayerHasHorizontalSpeed())
         {
-            transform.localScale = new Vector2(Mathf.Sign(rigidBody.velocity.x), 1f);
+            transform.localScale = new Vector2(Mathf.Sign(playerDelta.x), 1f);
         }
     }
 
     private bool PlayerHasHorizontalSpeed()
     {
-        return Mathf.Abs(rigidBody.velocity.x) > Mathf.Epsilon;
+        return Mathf.Abs(playerDelta.x) > Mathf.Epsilon;
     }
 
     void OnMove(InputValue value)
